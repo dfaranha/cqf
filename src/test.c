@@ -2,7 +2,7 @@
  * ============================================================================
  *
  *        Authors:  Prashant Pandey <ppandey@cs.stonybrook.edu>
- *                  Rob Johnson <robj@vmware.com>   
+ *                  Rob Johnson <robj@vmware.com>
  *
  * ============================================================================
  */
@@ -35,8 +35,8 @@ int main(int argc, char **argv)
 	uint64_t nhashbits = qbits + rbits;
 	uint64_t nslots = (1ULL << qbits);
 	uint64_t nvals = 95*nslots/100;
-	uint64_t key_count = 4;
-	uint64_t *vals;
+	uint64_t key_count = 1;
+	__uint128_t *vals;
 
 	/* Initialise the CQF */
 	/*if (!qf_malloc(&qf, nslots, nhashbits, 0, QF_HASH_INVERTIBLE, 0)) {*/
@@ -52,7 +52,7 @@ int main(int argc, char **argv)
 	qf_set_auto_resize(&qf, true);
 
 	/* Generate random values */
-	vals = (uint64_t*)malloc(nvals*sizeof(vals[0]));
+	vals = (__uint128_t*)malloc(nvals*sizeof(vals[0]));
 	RAND_bytes((unsigned char *)vals, sizeof(*vals) * nvals);
 	srand(0);
 	for (uint64_t i = 0; i < nvals; i++) {
@@ -65,7 +65,8 @@ int main(int argc, char **argv)
 	for (uint64_t i = 0; i < nvals; i++) {
 		int ret = qf_insert(&qf, vals[i], 0, key_count, QF_NO_LOCK);
 		if (ret < 0) {
-			fprintf(stderr, "failed insertion for key: %lx %d.\n", vals[i], 50);
+			fprintf(stderr, "failed insertion for key: %lx %lx %d.\n",
+				(uint64_t)(vals[i] >> 64), (uint64_t)vals[i], 50);
 			if (ret == QF_NO_SPACE)
 				fprintf(stderr, "CQF is full.\n");
 			else if (ret == QF_COULDNT_LOCK)
@@ -80,8 +81,8 @@ int main(int argc, char **argv)
 	for (uint64_t i = 0; i < nvals; i++) {
 		uint64_t count = qf_count_key_value(&qf, vals[i], 0, 0);
 		if (count < key_count) {
-			fprintf(stderr, "failed lookup after insertion for %lx %ld.\n", vals[i],
-							count);
+			fprintf(stderr, "failed lookup after insertion for %lx %lx %ld.\n",
+				(uint64_t)(vals[i] >> 64), (uint64_t)vals[i], count);
 			abort();
 		}
 	}
@@ -90,8 +91,8 @@ int main(int argc, char **argv)
 	for (uint64_t i = 0; i < nvals; i++) {
 		uint64_t count = qf_count_key_value(&qf, vals[i], 0, 0);
 		if (count < key_count) {
-			fprintf(stderr, "failed lookup during deletion for %lx %ld.\n", vals[i],
-							count);
+			fprintf(stderr, "failed lookup during deletion for %lx %lx %ld.\n",
+				(uint64_t)(vals[i] >> 64), (uint64_t)vals[i], count);
 			abort();
 		}
 		if (count > 0) {
@@ -127,8 +128,8 @@ int main(int argc, char **argv)
 	for (uint64_t i = 0; i < nvals; i++) {
 		uint64_t count = qf_count_key_value(&file_qf, vals[i], 0, 0);
 		if (count < key_count) {
-			fprintf(stderr, "failed lookup in file based CQF for %lx %ld.\n",
-							vals[i], count);
+			fprintf(stderr, "failed lookup in file based CQF for %lx %lx %ld.\n",
+				(uint64_t)(vals[i] >> 64), (uint64_t)vals[i], count);
 			abort();
 		}
 	}
@@ -148,17 +149,18 @@ int main(int argc, char **argv)
 	int i = 0;
 	qf_iterator_from_position(&file_qf, &qfi, 0);
 	while(!qfi_end(&qfi)) {
-		uint64_t key, value, count;
+		__uint128_t key;
+		uint64_t value, count;
 		qfi_get_key(&qfi, &key, &value, &count);
 		if (count < key_count) {
-			fprintf(stderr, "Failed lookup during iteration for: %lx. Returned count: %ld\n",
-							key, count);
+			fprintf(stderr, "Failed lookup during iteration for: %lx %lx. Returned count: %ld\n",
+				(uint64_t)(key >> 64), (uint64_t)key, count);
 			abort();
 		}
 		int64_t idx = qf_get_unique_index(&file_qf, key, value, 0);
 		if (idx == QF_DOESNT_EXIST) {
-			fprintf(stderr, "Failed lookup for unique index for: %lx. index: %ld\n",
-							key, idx);
+			fprintf(stderr, "Failed lookup for unique index for: %lx %lx. index: %ld\n",
+				(uint64_t)(key >> 64), (uint64_t)key, idx);
 			abort();
 		}
 		if (idx <= last_index) {
@@ -167,15 +169,15 @@ int main(int argc, char **argv)
 		}
 		last_index = idx;
 		if (qf_count_key_value(&unique_idx, key, 0, 0) > 0) {
-			fprintf(stderr, "Failed unique index for: %lx. index: %ld\n",
-							key, idx);
+			fprintf(stderr, "Failed unique index for: %lx %lx. index: %ld\n",
+				(uint64_t)(key >> 64), (uint64_t)key, idx);
 			abort();
 		}
 		qf_insert(&unique_idx, key, 0, 1, QF_NO_LOCK);
 		int64_t newindex = qf_get_unique_index(&unique_idx, key, 0, 0);
 		if (idx < newindex) {
-			fprintf(stderr, "Index weirdness: index %dth key %ld was at %ld, is now at %ld\n",
-							i, key, idx, newindex);
+			fprintf(stderr, "Index weirdness: index %dth key %lx %lx was at %ld, is now at %ld\n",
+							i, (uint64_t)(key >> 64), (uint64_t)key, idx, newindex);
 			//abort();
 		}
 
@@ -196,14 +198,14 @@ int main(int argc, char **argv)
 		count = qf_count_key_value(&file_qf, vals[i], 0, 0);
 		if (count > 0) {
 			if (ret < 0) {
-				fprintf(stderr, "failed deletion for %lx %ld ret code: %d.\n",
-								vals[i], count, ret);
+				fprintf(stderr, "failed deletion for %lx %lx %ld ret code: %d.\n",
+					(uint64_t)(vals[i] >> 64), (uint64_t)vals[i], count, ret);
 				abort();
 			}
 			uint64_t new_count = qf_count_key_value(&file_qf, vals[i], 0, 0);
 			if (new_count > 0) {
-				fprintf(stderr, "delete key failed for %lx %ld new count: %ld.\n",
-								vals[i], count, new_count);
+				fprintf(stderr, "delete key failed for %lx %lx %ld new count: %ld.\n",
+					(uint64_t)(vals[i] >> 64), (uint64_t)vals[i], count, new_count);
 				abort();
 			}
 		}
@@ -213,4 +215,3 @@ int main(int argc, char **argv)
 
 	fprintf(stdout, "Validated the CQF.\n");
 }
-

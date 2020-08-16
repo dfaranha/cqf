@@ -198,12 +198,13 @@ int64_t qf_resize_file(QF *qf, uint64_t nslots)
 	qf_iterator_from_position(qf, &qfi, 0);
 	int64_t ret_numkeys = 0;
 	do {
-		uint64_t key, value, count;
+		__uint128_t key;
+		uint64_t value, count;
 		qfi_get_hash(&qfi, &key, &value, &count);
 		qfi_next(&qfi);
 		int ret = qf_insert(&new_qf, key, value, count, QF_NO_LOCK | QF_KEY_IS_HASH);
 		if (ret < 0) {
-			fprintf(stderr, "Failed to insert key: %ld into the new CQF.\n", key);
+			fprintf(stderr, "Failed to insert key: %lx %lx into the new CQF.\n", (uint64_t)(key >> 64), (uint64_t)key);
 			return ret;
 		}
 		ret_numkeys++;

@@ -2,7 +2,7 @@
  * ============================================================================
  *
  *        Authors:  Prashant Pandey <ppandey@cs.stonybrook.edu>
- *                  Rob Johnson <robj@vmware.com>   
+ *                  Rob Johnson <robj@vmware.com>
  *
  * ============================================================================
  */
@@ -39,7 +39,7 @@ extern "C" {
 		   CQF can exhibit very bad performance if you insert a skewed
 			 distribution of intputs.
 	*/
-	
+
 	enum qf_hashmode {
 		QF_HASH_DEFAULT,
 		QF_HASH_INVERTIBLE,
@@ -72,9 +72,9 @@ extern "C" {
 	/******************************************
 		 The CQF defines low-level constructor and destructor operations
 		 that are designed to enable the application to manage the memory
-		 used by the CQF. 
+		 used by the CQF.
 	*******************************************/
-	
+
 	/*
 	 * Create an empty CQF in "buffer".  If there is not enough space at
 	 * buffer then it will return the total size needed in bytes to
@@ -96,7 +96,7 @@ extern "C" {
 	void *qf_destroy(QF *qf);
 
 	/* Allocate a new CQF using "nslots" at "buffer" and copy elements from "qf"
-	 * into it. 
+	 * into it.
 	 * If there is not enough space at buffer then it will return the total size
 	 * needed in bytes to initialize the new CQF.
 	 * */
@@ -105,9 +105,9 @@ extern "C" {
 
 	/***********************************
     The following convenience functions create and destroy CQFs by
-		using malloc/free to obtain and release the memory for the CQF. 
+		using malloc/free to obtain and release the memory for the CQF.
 	************************************/
-	
+
 	/* Initialize the CQF and allocate memory for the CQF. */
 	bool qf_malloc(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t
 								 value_bits, enum qf_hashmode hash, uint32_t seed);
@@ -133,26 +133,26 @@ extern "C" {
 #define QF_NO_SPACE (-1)
 #define QF_COULDNT_LOCK (-2)
 #define QF_DOESNT_EXIST (-3)
-	
-	/* Increment the counter for this key/value pair by count. 
+
+	/* Increment the counter for this key/value pair by count.
 	 * Return value:
 	 *    >= 0: distance from the home slot to the slot in which the key is
 	 *          inserted (or 0 if count == 0).
 	 *    == QF_NO_SPACE: the CQF has reached capacity.
 	 *    == QF_COULDNT_LOCK: TRY_ONCE_LOCK has failed to acquire the lock.
 	 */
-	int qf_insert(QF *qf, uint64_t key, uint64_t value, uint64_t count, uint8_t
+	int qf_insert(QF *qf, __uint128_t key, uint64_t value, uint64_t count, uint8_t
 								flags);
 
-	/* Set the counter for this key/value pair to count. 
-	 Return value: Same as qf_insert. 
+	/* Set the counter for this key/value pair to count.
+	 Return value: Same as qf_insert.
 	 Returns 0 if new count is equal to old count.
 	*/
 	int qf_set_count(QF *qf, uint64_t key, uint64_t value, uint64_t count,
 									 uint8_t flags);
 
 	/* Remove up to count instances of this key/value combination.
-	 * If the CQF contains <= count instances, then they will all be 
+	 * If the CQF contains <= count instances, then they will all be
 	 * removed, which is not an error.
 	 * Return value:
 	 *    >=  0: number of slots freed.
@@ -163,7 +163,7 @@ extern "C" {
 								flags);
 
 	/* Remove all instances of this key/value pair. */
-	int qf_delete_key_value(QF *qf, uint64_t key, uint64_t value, uint8_t flags);
+	int qf_delete_key_value(QF *qf, __uint128_t key, uint64_t value, uint8_t flags);
 
 	/* Remove all instances of this key. */
 	/* NOT IMPLEMENTED YET. */
@@ -180,13 +180,13 @@ extern "C" {
 	/****************************************
    Query functions
 	****************************************/
-	
+
 	/* Lookup the value associated with key.  Returns the count of that
 		 key/value pair in the QF.  If it returns 0, then, the key is not
 		 present in the QF. Only returns the first value associated with key
-		 in the QF.  If you want to see others, use an iterator. 
+		 in the QF.  If you want to see others, use an iterator.
 		 May return QF_COULDNT_LOCK if called with QF_TRY_LOCK.  */
-	uint64_t qf_query(const QF *qf, uint64_t key, uint64_t *value, uint8_t
+	uint64_t qf_query(const QF *qf, __uint128_t key, uint64_t *value, uint8_t
 										flags);
 
 	/* Return the number of times key has been inserted, with any value,
@@ -197,7 +197,7 @@ extern "C" {
 	/* Return the number of times key has been inserted, with the given
 		 value, into qf.
 		 May return QF_COULDNT_LOCK if called with QF_TRY_LOCK.  */
-	uint64_t qf_count_key_value(const QF *qf, uint64_t key, uint64_t value,
+	uint64_t qf_count_key_value(const QF *qf, __uint128_t key, uint64_t value,
 															uint8_t flags);
 
 	/* Returns a unique index corresponding to the key in the CQF.  Note
@@ -207,7 +207,7 @@ extern "C" {
 		 If the key is not found then returns QF_DOESNT_EXIST.
 		 May return QF_COULDNT_LOCK if called with QF_TRY_LOCK.
 	 */
-	int64_t qf_get_unique_index(const QF *qf, uint64_t key, uint64_t value,
+	int64_t qf_get_unique_index(const QF *qf, __uint128_t key, uint64_t value,
 															uint8_t flags);
 
 
@@ -241,13 +241,13 @@ extern "C" {
 	/****************************************
 		Iterators
 	*****************************************/
-	
+
 	typedef struct quotient_filter_iterator quotient_filter_iterator;
 	typedef quotient_filter_iterator QFi;
 
 #define QF_INVALID (-4)
 #define QFI_INVALID (-5)
-	
+
 	/* Initialize an iterator starting at the given position.
 	 * Return value:
 	 *  >= 0: iterator is initialized and positioned at the returned slot.
@@ -262,7 +262,7 @@ extern "C" {
 	 *  >= 0: iterator is initialized and position at the returned slot.
 	 *   = QFI_INVALID: iterator has reached end.
 	 */
-	int64_t qf_iterator_from_key_value(const QF *qf, QFi *qfi, uint64_t key,
+	int64_t qf_iterator_from_key_value(const QF *qf, QFi *qfi, __uint128_t key,
 																		 uint64_t value, uint8_t flags);
 
 	/* Requires that the hash mode of the CQF is INVERTIBLE or NONE.
@@ -272,14 +272,14 @@ extern "C" {
 	 *   = QFI_INVALID: iterator has reached end.
 	 *   = QF_INVALID: hash mode is QF_DEFAULT_HASH
 	 */
-	int qfi_get_key(const QFi *qfi, uint64_t *key, uint64_t *value, uint64_t
+	int qfi_get_key(const QFi *qfi, __uint128_t *key, uint64_t *value, uint64_t
 									*count);
 
 	/* Return value:
 	 *   = 0: Iterator is still valid.
 	 *   = QFI_INVALID: iterator has reached end.
 	 */
-	int qfi_get_hash(const QFi *qfi, uint64_t *hash, uint64_t *value, uint64_t
+	int qfi_get_hash(const QFi *qfi, __uint128_t *hash, uint64_t *value, uint64_t
 									 *count);
 
 	/* Advance to next entry.
@@ -295,7 +295,7 @@ extern "C" {
 	/************************************
    Miscellaneous convenience functions.
 	*************************************/
-	
+
 	/* Reset the CQF to an empty filter. */
 	void qf_reset(QF *qf);
 
